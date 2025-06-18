@@ -1,0 +1,48 @@
+version: "3.8"
+
+services:
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.12.1
+    container_name: mlflow
+    command: mlflow server --backend-store-uri /mlflow/mlruns --host 0.0.0.0 --port 5000
+    volumes:
+      - ./mlruns:/mlflow/mlruns
+    ports:
+      - "5050:5000"
+    networks:
+      - dsm_net
+
+  airflow:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    container_name: airflow
+    restart: always
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
+      - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=False
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__CORE__FERNET_KEY=TEST_FERNET_KEY_123
+      - AIRFLOW__CORE__DAGS_FOLDER=/opt/airflow/dags
+      - AIRFLOW__CORE__BASE_LOG_FOLDER=/opt/airflow/logs
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./zones:/opt/airflow/zones
+      - ./src:/opt/airflow/src
+      - ./src/mlflow_pipeline.py:/opt/airflow/mlflow_pipeline.py
+      - ./mlruns:/opt/airflow/mlruns
+    command: >
+      bash -c "airflow db upgrade &&
+               airflow users create --username admin --password admin --firstname Air --lastname Flow --role Admin --email admin@example.com &&
+               airflow scheduler & airflow webserver"
+    ports:
+      - "8080:8080"
+    networks:
+      - dsm_net
+    depends_on:
+      - mlflow
+
+
+networks:
+  dsm_net:
+    driver: bridge

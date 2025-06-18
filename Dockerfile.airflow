@@ -1,0 +1,17 @@
+FROM apache/airflow:2.9.0-python3.11
+
+USER root
+
+# Установка Java (нужна для Spark)
+RUN apt-get update && \
+    apt-get install -y openjdk-17-jdk && \
+    apt-get clean
+
+# Копируем requirements
+COPY requirements.txt /requirements.txt
+
+# Переключаемся на airflow (ВАЖНО: pip надо запускать от этого пользователя)
+USER airflow
+
+# Устанавливаем Python-зависимости
+RUN pip install --no-cache-dir -r /requirements.txt
