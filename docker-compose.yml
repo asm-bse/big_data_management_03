@@ -29,7 +29,6 @@ services:
       - ./airflow/dags:/opt/airflow/dags
       - ./zones:/opt/airflow/zones
       - ./src:/opt/airflow/src
-      - ./src/mlflow_pipeline.py:/opt/airflow/mlflow_pipeline.py
       - ./mlruns:/opt/airflow/mlruns
     command: >
       bash -c "airflow db upgrade &&

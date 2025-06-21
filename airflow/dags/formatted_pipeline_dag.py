@@ -9,13 +9,14 @@ default_args = {
 }
 
 with DAG(
-    'mlflow_pipeline_dag',
+    'formatted_pipeline_dag',
     default_args=default_args,
     schedule_interval=None,
     catchup=False
 ) as dag:
 
     run_ml_pipeline = BashOperator(
-        task_id='run_ml_pipeline',
-        bash_command='python /opt/airflow/src/mlflow_pipeline.py'
+        task_id='run_formatted_pipeline',
+        bash_command='python /opt/airflow/src/formatted.py --landing-base /opt/airflow/zones/landing --formatted-base /opt/airflow/zones/formatted --format parquet --overwrite'
+
     )
