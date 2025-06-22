@@ -12,11 +12,12 @@ with DAG(
     'landing_pipeline_dag',
     default_args=default_args,
     schedule_interval=None,
+    is_paused_upon_creation=True,
     catchup=False
 ) as dag:
 
     run_ml_pipeline = BashOperator(
         task_id='run_landing_pipeline',
-        bash_command='python /opt/airflow/src/landing.py --source-base /opt/airflow/zones/raw --landing-base /opt/airflow/zones/landing --mode copy'
+        bash_command='python /opt/airflow/src/landing.py --source-base /opt/airflow/raw --landing-base /opt/airflow/zones/landing --mode copy'
 
     )

@@ -3,32 +3,49 @@
 
 This project builds an end-to-end machine learning pipeline for predicting housing-related incidents based on property features. The pipeline is orchestrated using Apache Airflow, powered by PySpark for data processing and MLflow for model tracking and deployment.
 
-## 🚀 Project Overview
+## Project Overview
 
-- **Data Source**: Real estate and income datasets stored in local Parquet format.
-- **ML Task**: Binary classification — whether a house is in a high-price-per-room zone.
+- **Data Source**: The pipeline ingests and integrates three distinct datasets:
+
+1. Idealista: Real estate listings (JSON format).
+2. Incidences: Public incident reports from OpenData BCN (CSV format).
+3. Income: Yearly income statistics per district from OpenData BCN (CSV format).
+
+- **ML Tasks**: Two regression models are trained in parallel to solve different business problems:
+
+1. Incident Prediction: Predicts the number of public incidents (incidence_count) in a district based on socio-economic and real estate data.
+2. Income Prediction: Predicts the average income index (avg_income_index) of a district based on property market and safety metrics.
+
 - **Models Used**: Logistic Regression and Decision Tree (Spark MLlib).
-- **Orchestration**: Apache Airflow DAG (`ml_pipeline_dag.py`).
-- **Model Logging & Deployment**: MLflow Tracking Server with local backend store.
+- **Orchestration**: Apache Airflow DAG (`full_data_science_pipeline_dag.py`).
+- **Model Logging & Deployment**: MLflow Tracking Server with local backend storage.
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 .
-├── airflow/                   # Airflow DAGs, logs, plugins
-│   └── dags/ml_pipeline_dag.py
-├── best_model/               # Exported model artifacts
-├── docker-compose.yml        # Docker services (Airflow, MLflow)
-├── Dockerfile.airflow        # Custom Dockerfile for Airflow service
-├── mlruns/                   # MLflow local run history
+├── airflow/
+│   └── dags/
+│       └── full_data_science_pipeline_dag.py
+├── docker-compose.yml
+├── Dockerfile.airflow
+├── mlruns/
 ├── src/
-│   └── mlflow_pipeline.py    # Core training pipeline
-├── zones/                    # Raw, formatted, exploitation data zones
-├── requirements.txt          # Python dependencies
-├── README.md                 # This file
+│   ├── formatted.py
+│   ├── exploitation.py
+│   ├── train_incident_model.py
+│   └── train_income_model.py
+├── zones/
+│   ├── lookup/
+│   ├── landing/
+│   ├── formatted/
+│   └── exploitation/
+├── requirements.txt
+└── README.md
+
 ```
 
-## 🛠️ How to Run the Project
+## How to Run the Project
 
 ### 1. Build and Start Docker Containers
 
@@ -51,33 +68,36 @@ Visit http://localhost:8080 and log in with:
 - **Username**: `admin`
 - **Password**: `admin`
 
-Trigger the DAG named `mlflow_pipeline_dag`.
+Trigger the DAG named `full_data_science_pipeline_dag`.
 
 ### 3. What the DAG Does
 
-- Loads dataset from the exploitation zone (`zones/exploitation/idealista`)
-- Trains two models with Spark MLlib
-- Evaluates accuracy
-- Logs metrics and models to MLflow
-- Promotes the best model to Production stage
+The full_data_science_pipeline_dag orchestrates the entire project workflow:
+ - run_formatted_pipeline: Executes the formatted.py script. It reads raw data from the landing zone, cleans it, extracts the year from Idealista filenames, and enriches all datasets with a unified district_id. The output is saved to the formatted zone, partitioned by year.
+ - run_exploitation_pipeline: Executes exploitation.py. It takes the formatted data, creates yearly aggregated KPIs for each district, and joins them into a single master table (district_kpis) in the exploitation zone.
 
-## ✅ Features
+Parallel Model Training: Once the data is prepared, two tasks run in parallel:
 
-- End-to-end ML lifecycle automation
-- Local MLflow server with Spark model logging
-- Clear model comparison based on accuracy
-- Model promotion to production-ready stage
-- Dockerized for easy reproducibility
+ - run_train_incident_model: Executes train_incident_model.py to predict incident counts.
+ - run_train_income_model: Executes train_income_model.py to predict the income index.
 
-## 📦 Dependencies
+Each ML script uses Cross-Validation to find the best hyperparameters, logs all results to MLflow, and promotes the best-performing model to the "Production" stage in the MLflow Model Registry.
+
+## Key Pipeline Features
+
+ - End-to-End Orchestration: A single Airflow DAG manages the entire data flow, from raw files to production-ready models, ensuring data dependencies and execution order are respected.
+ - Data Reconciliation: Implements robust logic to handle inconsistencies in district names across different data sources, using cleaning functions and a common lookup table.
+ - Temporal Data Alignment: Cleverly extracts year information from filenames (idealista) to enable powerful time-based analysis and aggregation.
+ - Advanced Imputation: Fills missing data points not just with a global average, but with more accurate, context-aware values like the district-specific mean calculated using Spark's Window functions.
+ - Robust Model Evaluation: Uses CrossValidator for hyperparameter tuning, providing a more reliable measure of model performance and preventing overfitting.
+ - Dual ML Use-Cases: Demonstrates the flexibility of the data platform by training two different models for two different prediction tasks from the same master data table.
+ - Complete MLOps Cycle: Integrates MLflow to track experiments, compare models, and manage the model lifecycle by automatically registering and deploying the best version.
+
+## Dependencies
 
 Dependencies are automatically installed inside the Docker container using the provided `Dockerfile.airflow` and `requirements.txt`.
 
-## ✍️ Authors
+## Authors
 
 - **Aleksandr Smolin**
 - **Maria Simakova**
-
-## 📄 License
-
-MIT License
